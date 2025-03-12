@@ -3,10 +3,12 @@ import os,json
 import telebot.types
 import requests
 
-load_dotenv()
+env_path = os.path.join(os.getcwd(), "token2.env")
+load_dotenv(env_path)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 FASTAPI_BASE_URL = os.environ.get("FASTAPI_BASE_URL")
+print(f"BOT_TOKEN: {BOT_TOKEN}")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 def get_resources(course_id: str, resource_type: str) -> dict:
