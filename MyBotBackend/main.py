@@ -1,9 +1,12 @@
 from fastapi import FastAPI,Depends,HTTPException,Body
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_,cast, String
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import shutil,os,json,time
 import subprocess,logging
+from alembic.config import Config
+from alembic import command
+
 
 
 from Models.Acad import (
@@ -79,6 +82,15 @@ async def get_resource(resource_type: str, course_id: str, db: Session = Depends
 
     return resources
 
+@app.get("/healthz")
+async def health_check():
+    return {"status": "ok"}
+
+# def run_migrations():
+#     alembic_cfg = Config("alembic.ini")  # Ensure this path is correct
+#     command.upgrade(alembic_cfg, "head")
+
+# run_migrations()
 
 
 @app.post("/add-resources/{course_code}/{resource_type}/upload", response_model=ResourceResponse)
@@ -102,7 +114,7 @@ async def add_resource(
         select(Resource).filter(
             and_(Resource.course_code == course_code, 
                  Resource.resource_type == resource_type, 
-                 Resource.resource_data == json.dumps([resource_data]))
+                 cast(Resource.resource_data, String) == json.dumps([resource_data]))
         )
     ).scalars().first()
 
@@ -125,17 +137,4 @@ async def add_resource(
         "resource_data": json.loads(new_resource.resource_data),   
     }
 
-@app.get("/healthz")
-async def health_check():
-    return {"status": "ok"}
 
-def run_migrations():
-    try:
-        logging.info("Running Alembic migrations...")
-        subprocess.run(["alembic", "upgrade", "head"], check=True)
-        logging.info("Migrations completed successfully.")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Migration failed: {e}")
-
-# Run migrations before starting the app
-run_migrations()

@@ -51,6 +51,11 @@ def list_courses(message):
     else:
         bot.reply_to(message, "❌ Failed to fetch courses.")
 
+@bot.message_handler(commands=["stop"])
+def stop_message(message):
+    bot.reply_to(message, "Alright! If you need me again, just send /start.")
+    bot.clear_step_handler_by_chat_id(message.chat.id)
+
 @bot.message_handler(commands=["add"])
 def add_handler(message):
     sent_msg = bot.send_message(
@@ -118,7 +123,11 @@ def callback_query(call):
         bot.send_message(call.message.chat.id, f"➕ Add {resource_type} for {course_code}. Please upload the file or paste a link.")
         bot.register_next_step_handler(call.message, save_resource, course_code, resource_type)
 
+@bot.message_handler(content_types=['text'])
 def process_course_code(message, action):
+    if message.text is None:
+        bot.reply_to(message, "Invalid input. Please enter a valid course code.")
+        return
     course_code = message.text.upper()
     response = requests.get(f"{FASTAPI_BASE_URL}/get-courses")
     
@@ -154,7 +163,13 @@ def save_resource(message, course_code, resource_type):
         f"{FASTAPI_BASE_URL}/add-resources/{course_code}/{resource_type}/upload",
         json={"course_code": course_code, "resource_type": resource_type, "resource_data": file_id}
     )
+    try:
+        json_response = response.json()
+        print("jSON",json_response)
+    except requests.exceptions.JSONDecodeError:
+        print("Error: Response is not valid JSON. Server response:", response.text)
     print(response.json())
+    
 
     bot.send_message(message.chat.id, "✅ Resource saved successfully" if response.status_code == 200 else f"❌ Failed: {response.text}")
 
